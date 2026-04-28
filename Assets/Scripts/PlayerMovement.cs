@@ -2,151 +2,63 @@ using UnityEngine;
 
 public class PlayerMovement : MonoBehaviour
 {
-    // Hvor fort karakteren beveger seg
-    public float moveSpeed = 4f;
-
-    // Hvor fort karakteren snur seg mot retningen den går
-    public float turnSpeed = 8f;
-
-    // Animator styrer idle- og løpeanimasjonene
-    private Animator animator;
-
-
-
-    // ----------------- JUMP --------------
-    // Hvor høyt karakteren hopper
+    public float moveSpeed = 7f;
+    public float gravity = -20f;
     public float jumpHeight = 2f;
 
-    // Hvor sterkt karakteren trekkes ned
-    public float gravity = -20f;
+    private CharacterController controller;
+    private Vector3 velocity;
+    private bool isGrounded;
+    private Animator animator;
 
-    // Fart opp/ned
-    private float verticalSpeed = 0f;
-
-    // Start-høyden til karakteren
-    private float groundY;
-
-    // Om karakteren står på bakken
-    private bool isGrounded = true;
-
-    // Om jump-animasjonen har startet, men fysisk hopp ikke har begynt enda
-   
-
-    
-
-    private void Awake()
+    void Start()
     {
-        // Henter Animator-komponenten fra karakteren
+        controller = GetComponent<CharacterController>();
         animator = GetComponent<Animator>();
-
-        groundY = transform.position.y;
     }
 
-    private void Update()
+    void Update()
     {
-        float horizontal = 0f;
-        float vertical = 0f;
-
-        // W = fremover i forhold til kameraet
-        if (Input.GetKey(KeyCode.W))
+        // Sjekker om vi står på bakken
+        isGrounded = controller.isGrounded;
+        if (isGrounded && velocity.y < 0)
         {
-            vertical += 1f;
+            velocity.y = -2f; // Holder oss klistret til bakken
         }
 
-        // S = bakover i forhold til kameraet
-        if (Input.GetKey(KeyCode.S))
+        // Henter input (WASD)
+        float x = Input.GetAxisRaw("Horizontal");
+        float z = Input.GetAxisRaw("Vertical");
+
+        // Bevegelse basert på kameraet
+        Vector3 move = (Camera.main.transform.right * x + Camera.main.transform.forward * z);
+        move.y = 0; // Vi vil ikke fly oppover
+
+        if (move.magnitude > 0.1f)
         {
-            vertical -= 1f;
+            // FLYTTING
+            controller.Move(move.normalized * moveSpeed * Time.deltaTime);
+
+            // ØYEBLIKKELIG SVINGING:
+            // Vi setter retningen direkte så det ikke blir "trege" svinger
+            transform.forward = move;
+
+            animator.SetFloat("Speed", 1f);
+        }
+        else
+        {
+            animator.SetFloat("Speed", 0f);
         }
 
-        // D = høyre i forhold til kameraet
-        if (Input.GetKey(KeyCode.D))
+        // HOPP
+        if (Input.GetButtonDown("Jump") && isGrounded)
         {
-            horizontal += 1f;
-        }
-
-        // A = venstre i forhold til kameraet
-        if (Input.GetKey(KeyCode.A))
-        {
-            horizontal -= 1f;
-        }
-
-        // Lager input-retningen fra WASD
-        Vector3 inputDirection = new Vector3(horizontal, 0f, vertical);
-        inputDirection = inputDirection.normalized;
-
-        // Sjekker om spilleren trykker på noen movement-knapper
-        bool isMoving = inputDirection != Vector3.zero;
-
-        if (isMoving)
-        {
-            // Henter kameraets fremover-retning
-            Vector3 cameraForward = Camera.main.transform.forward;
-
-            // Fjerner opp/ned-retning fra kameraet
-            // Vi vil bare bevege oss langs bakken
-            cameraForward.y = 0f;
-            cameraForward = cameraForward.normalized;
-
-            // Henter kameraets høyre-retning
-            Vector3 cameraRight = Camera.main.transform.right;
-
-            // Fjerner opp/ned-retning her også
-            cameraRight.y = 0f;
-            cameraRight = cameraRight.normalized;
-
-            // Lager faktisk bevegelsesretning basert på kameraet
-            Vector3 moveDirection = cameraForward * vertical + cameraRight * horizontal;
-            moveDirection = moveDirection.normalized;
-
-            // Flytter karakteren i riktig retning
-            transform.position += moveDirection * moveSpeed * Time.deltaTime;
-
-            // Finner hvilken vei karakteren skal se
-            Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
-
-            // Snur karakteren gradvis mot retningen
-            transform.rotation = Quaternion.Slerp(
-                transform.rotation,
-                targetRotation,
-                turnSpeed * Time.deltaTime
-            );
-
-            // Fortell Animator at karakteren løper
-                animator.SetFloat("Speed", 1f);
-            }
-            else
-            {
-                // Fortell Animator at karakteren står stille
-                animator.SetFloat("Speed", 0f);
-            }
-
-
-
-            // -------- JUMP ---------------
-        if (Input.GetKeyDown(KeyCode.Space) && isGrounded)
-        {
-            verticalSpeed = Mathf.Sqrt(jumpHeight * -2f * gravity);
-            isGrounded = false;
-
+            velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
             animator.SetTrigger("Jump");
         }
 
-    // Gravity trekker karakteren ned
-    verticalSpeed += gravity * Time.deltaTime;
-
-    // Flytter karakteren opp eller ned
-    transform.position += Vector3.up * verticalSpeed * Time.deltaTime;
-
-    // Når karakteren kommer ned til bakken igjen
-    if (transform.position.y <= groundY)
-    {
-        Vector3 position = transform.position;
-        position.y = groundY;
-        transform.position = position;
-
-        verticalSpeed = 0f;
-        isGrounded = true;
-    }
+        // TYNGDEKRAFT
+        velocity.y += gravity * Time.deltaTime;
+        controller.Move(velocity * Time.deltaTime);
     }
 }
