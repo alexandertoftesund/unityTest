@@ -6,23 +6,37 @@ public class FallReset : MonoBehaviour
 
     void Start()
     {
-        // Vi finner LevelManageren i banen automatisk
-        levelManager = GameObject.FindObjectOfType<LevelManager>();
+        FindLevelManager();
+    }
+
+    private void FindLevelManager()
+    {
+        levelManager = FindFirstObjectByType<LevelManager>();
+
+        if (levelManager == null)
+        {
+            Debug.LogWarning("FallReset fant ikke LevelManager ennå.");
+        }
     }
 
     private void OnTriggerEnter(Collider other)
     {
         if (other.CompareTag("Player"))
         {
+            // Prøv å finne LevelManager på nytt hvis den ikke ble funnet i Start()
+            if (levelManager == null)
+            {
+                FindLevelManager();
+            }
+
             if (levelManager != null)
             {
-                // Vi bruker funksjonen vi laget i LevelManager
                 levelManager.RespawnPlayer();
                 Debug.Log("Spilleren falt og ble sendt til siste checkpoint!");
             }
             else
             {
-                Debug.LogWarning("Fant ingen LevelManager i scenen!");
+                Debug.LogWarning("Fant fortsatt ingen LevelManager i scenen!");
             }
         }
     }
