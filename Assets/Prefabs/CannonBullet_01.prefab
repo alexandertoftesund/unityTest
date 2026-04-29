@@ -98,7 +98,7 @@ MonoBehaviour:
   speed: 6
   lifeTime: 6
   knockbackStrength: 5
-  pushDuration: 1
+  pushDuration: 0.5
 --- !u!54 &6510974449293571776
 Rigidbody:
   m_ObjectHideFlags: 0

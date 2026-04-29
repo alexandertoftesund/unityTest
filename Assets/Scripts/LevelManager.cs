@@ -1,9 +1,8 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
+using UnityEngine.SceneManagement; // Denne må være med for å bytte scener
 
 public class LevelManager : MonoBehaviour
 {
-    // Dette gjør at andre script lett kan få tak i manageren
     public static LevelManager Instance { get; private set; }
 
     private Transform player;
@@ -11,7 +10,6 @@ public class LevelManager : MonoBehaviour
 
     private void Awake()
     {
-        // Sjekker om det allerede finnes en LevelManager
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
@@ -19,13 +17,11 @@ public class LevelManager : MonoBehaviour
         }
 
         Instance = this;
-        // Dette gjør at objektet ikke slettes når du bytter scene
         DontDestroyOnLoad(gameObject);
     }
 
     private void OnEnable()
     {
-        // Vi lytter etter når en scene er ferdig lastet
         SceneManager.sceneLoaded += OnSceneLoaded;
     }
 
@@ -36,7 +32,6 @@ public class LevelManager : MonoBehaviour
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        // Finn spilleren automatisk i den nye scenen
         FindPlayerInScene();
     }
 
@@ -46,7 +41,6 @@ public class LevelManager : MonoBehaviour
         if (foundPlayer != null)
         {
             player = foundPlayer.transform;
-            // Setter første spawnpoint til der spilleren starter i den nye banen
             currentSpawnPoint = player.position;
         }
     }
@@ -68,6 +62,24 @@ public class LevelManager : MonoBehaviour
             player.position = currentSpawnPoint;
 
             if (cc != null) cc.enabled = true;
+        }
+    }
+
+    // --- DETTE ER DELEN SOM MANGLER: ---
+    public void LoadNextLevel()
+    {
+        // Vi finner nummeret (index) til banen vi er i nå, og legger til 1
+        int nextSceneIndex = SceneManager.GetActiveScene().buildIndex + 1;
+
+        // Vi sjekker om det faktisk finnes en neste scene i Build Settings
+        if (nextSceneIndex < SceneManager.sceneCountInBuildSettings)
+        {
+            SceneManager.LoadScene(nextSceneIndex);
+        }
+        else
+        {
+            Debug.Log("Ingen flere levels i Build Settings! Går tilbake til start.");
+            SceneManager.LoadScene(0); // Laster den aller første scenen (f.eks. menyen)
         }
     }
 }
