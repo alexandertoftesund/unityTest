@@ -2,30 +2,27 @@ using UnityEngine;
 
 public class FallReset : MonoBehaviour
 {
-    [Header("Referanse til Spawn")]
-    // Her drar du inn objektet spilleren skal lande på (SpawnPad)
-    public Transform spawnPad;
+    private LevelManager levelManager;
+
+    void Start()
+    {
+        // Vi finner LevelManageren i banen automatisk
+        levelManager = GameObject.FindObjectOfType<LevelManager>();
+    }
 
     private void OnTriggerEnter(Collider other)
     {
-        // Sjekker om det er spilleren som traff sonen
         if (other.CompareTag("Player"))
         {
-            // Vi henter CharacterControlleren
-            CharacterController controller = other.GetComponent<CharacterController>();
-
-            if (controller != null && spawnPad != null)
+            if (levelManager != null)
             {
-                // VIKTIG: Vi må skru av controlleren før vi flytter den
-                controller.enabled = false;
-
-                // Flytt spilleren til SpawnPad sin posisjon
-                other.transform.position = spawnPad.position;
-
-                // Skru den på igjen etterpå
-                controller.enabled = true;
-
-                Debug.Log("Spilleren falt utfor og ble sendt til spawn!");
+                // Vi bruker funksjonen vi laget i LevelManager
+                levelManager.RespawnPlayer();
+                Debug.Log("Spilleren falt og ble sendt til siste checkpoint!");
+            }
+            else
+            {
+                Debug.LogWarning("Fant ingen LevelManager i scenen!");
             }
         }
     }
