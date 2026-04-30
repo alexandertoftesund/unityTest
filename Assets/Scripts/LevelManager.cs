@@ -1,12 +1,16 @@
 using UnityEngine;
-using UnityEngine.SceneManagement; // Denne må være med for å bytte scener
+using UnityEngine.SceneManagement;
 
 public class LevelManager : MonoBehaviour
 {
     public static LevelManager Instance { get; private set; }
 
+    [Header("Global UI")]
+    public CanvasGroup blackScreen;
+
     private Transform player;
     private Vector3 currentSpawnPoint;
+    private Quaternion currentSpawnRotation; // Ny variabel for retning
 
     private void Awake()
     {
@@ -42,12 +46,15 @@ public class LevelManager : MonoBehaviour
         {
             player = foundPlayer.transform;
             currentSpawnPoint = player.position;
+            currentSpawnRotation = player.rotation; // Lagrer retningen spilleren har ved start
         }
     }
 
-    public void UpdateSpawnPoint(Vector3 newPosition)
+    // Oppdatert for å også kunne ta imot ny retning (f.eks. fra en checkpoint)
+    public void UpdateSpawnPoint(Vector3 newPosition, Quaternion newRotation)
     {
         currentSpawnPoint = newPosition;
+        currentSpawnRotation = newRotation;
     }
 
     public void RespawnPlayer()
@@ -60,26 +67,23 @@ public class LevelManager : MonoBehaviour
             if (cc != null) cc.enabled = false;
 
             player.position = currentSpawnPoint;
+            player.rotation = currentSpawnRotation; // Setter retningen tilbake til start
 
             if (cc != null) cc.enabled = true;
         }
     }
 
-    // --- DETTE ER DELEN SOM MANGLER: ---
     public void LoadNextLevel()
     {
-        // Vi finner nummeret (index) til banen vi er i nå, og legger til 1
         int nextSceneIndex = SceneManager.GetActiveScene().buildIndex + 1;
 
-        // Vi sjekker om det faktisk finnes en neste scene i Build Settings
         if (nextSceneIndex < SceneManager.sceneCountInBuildSettings)
         {
             SceneManager.LoadScene(nextSceneIndex);
         }
         else
         {
-            Debug.Log("Ingen flere levels i Build Settings! Går tilbake til start.");
-            SceneManager.LoadScene(0); // Laster den aller første scenen (f.eks. menyen)
+            SceneManager.LoadScene(0);
         }
     }
 }

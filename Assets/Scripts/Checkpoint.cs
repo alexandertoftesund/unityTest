@@ -30,7 +30,7 @@ public class Checkpoint : MonoBehaviour
         isActivated = true;
 
         // 1. Lagre posisjonen (vi legger til litt høyde så man ikke spawner inni gulvet)
-        levelManager.UpdateSpawnPoint(transform.position + Vector3.up * 1f);
+        LevelManager.Instance.UpdateSpawnPoint(transform.position, transform.rotation);
 
         // 2. Endre farge på flagget
         if (flagRenderer != null)
