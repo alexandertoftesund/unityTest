@@ -4,10 +4,10 @@ using System.Collections;
 public class RespawnHandler : MonoBehaviour
 {
     [Header("Innstillinger")]
-    public float fadeSpeed = 1.0f;
-    public float floatHeight = 4.0f;
-    public float floatDownSpeed = 2.0f;
-    public float landingDelay = 0.3f;
+    private float fadeSpeed = 0.75f;
+    private float floatHeight = 5.0f;
+    private float floatDownSpeed = 4.0f;
+    private float landingDelay = 0.25f;
 
     private bool isRespawning = false;
 
