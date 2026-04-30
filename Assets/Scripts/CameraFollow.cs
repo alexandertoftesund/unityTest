@@ -6,58 +6,60 @@ public class CameraFollow : MonoBehaviour
     public Transform target;
     private CharacterController targetController;
 
-    [Header("Vinkel-innstillinger")]
-    public float height = 9.0f;
+    [Header("Innstillinger")]
+    public float height = 5.0f; // Justert ned litt for huler
     public float distance = 4.0f;
-
-    [Header("Smoothing (Senket for stabilitet)")]
-    // Hvor raskt kameraet flytter seg fysisk (Posisjon)
     public float positionSmooth = 4f;
-    // Hvor raskt kameraet svinger rundt spilleren (Orbit) - SENKET
     public float orbitSmooth = 1.2f;
-    // Hvor raskt selve blikket justerer seg (Look) - SENKET
     public float lookSmooth = 1.5f;
+
+    [Header("Kollisjon")]
+    public LayerMask collisionLayers; // Velg hvilke lag som er vegger
+    public float collisionPadding = 0.5f; // Litt avstand fra veggen
 
     private float lastGroundedY;
 
-    private void Start()
+    void Start()
     {
-        if (target != null)
+        if (target == null) target = GameObject.FindWithTag("Player")?.transform;
+
+        if (target)
         {
             targetController = target.GetComponent<CharacterController>();
             lastGroundedY = target.position.y;
         }
     }
 
-    private void LateUpdate()
+    void LateUpdate()
     {
-        if (target == null) return;
+        if (!target) return;
 
-        // 1. BEREGN ROTASJON (Veldig treg svinging)
-        float angle = transform.eulerAngles.y;
-        float targetAngle = target.eulerAngles.y;
-
-        // Mathf.LerpAngle med lav orbitSmooth gjør at kameraet "lagger" behagelig etter
-        float lerpedAngle = Mathf.LerpAngle(angle, targetAngle, orbitSmooth * Time.deltaTime);
+        // 1. ROTASJON
+        float lerpedAngle = Mathf.LerpAngle(transform.eulerAngles.y, target.eulerAngles.y, orbitSmooth * Time.deltaTime);
         Quaternion rotation = Quaternion.Euler(0, lerpedAngle, 0);
 
-        // 2. OPPDATER BAKKE-HØYDE
-        if (targetController != null && targetController.isGrounded)
-        {
+        // 2. BAKKE-HØYDE
+        if (targetController?.isGrounded ?? false)
             lastGroundedY = Mathf.Lerp(lastGroundedY, target.position.y, 4f * Time.deltaTime);
+
+        // 3. POSISJON (Beregner først hvor kameraet VIL være)
+        Vector3 wantedPos = target.position - (rotation * Vector3.forward * distance);
+        wantedPos.y = lastGroundedY + height;
+
+        // --- NYTT: Sjekk for kollisjon mellom spiller og ønsket posisjon ---
+        Vector3 rayOrigin = target.position + Vector3.up * 1.5f; // Skyt fra spillerens "hode"
+        Vector3 direction = wantedPos - rayOrigin;
+
+        if (Physics.Raycast(rayOrigin, direction.normalized, out RaycastHit hit, direction.magnitude, collisionLayers))
+        {
+            // Vi traff noe! Flytt kameraet til treffpunktet minus litt padding
+            wantedPos = hit.point - direction.normalized * collisionPadding;
         }
 
-        // 3. BEREGN POSISJON
-        Vector3 flatPosition = target.position - (rotation * Vector3.forward * distance);
-        Vector3 wantedPosition = new Vector3(flatPosition.x, lastGroundedY + height, flatPosition.z);
+        transform.position = Vector3.Lerp(transform.position, wantedPos, positionSmooth * Time.deltaTime);
 
-        transform.position = Vector3.Lerp(transform.position, wantedPosition, positionSmooth * Time.deltaTime);
-
-        // 4. SE PÅ SPILLEREN (Mykt fokus)
-        // Vi ser på et punkt foran spilleren, men med lav lookSmooth for å unngå rykk
-        Vector3 lookAtPoint = new Vector3(target.position.x, lastGroundedY, target.position.z) + (target.forward * 2f);
-        Quaternion targetRotation = Quaternion.LookRotation(lookAtPoint - transform.position);
-
-        transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, lookSmooth * Time.deltaTime);
+        // 4. SE PÅ SPILLEREN
+        Vector3 lookAtPoint = new Vector3(target.position.x, lastGroundedY + 1.5f, target.position.z) + (target.forward * 2f);
+        transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(lookAtPoint - transform.position), lookSmooth * Time.deltaTime);
     }
 }

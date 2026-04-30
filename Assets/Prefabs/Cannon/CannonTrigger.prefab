@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5596648017455101883}
   - component: {fileID: 3220250336313068256}
-  - component: {fileID: 1203786189522578283}
+  - component: {fileID: 844163610396907851}
   m_Layer: 0
   m_Name: CannonTrigger
   m_TagString: Untagged
@@ -26,8 +26,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2076343021025392985}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 20.804, y: 1.093, z: -14.741}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 14.783901, y: 0.093000054, z: -13.12374}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -54,7 +54,7 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 4, y: 4, z: 4}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &1203786189522578283
+--- !u!114 &844163610396907851
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -63,7 +63,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 2076343021025392985}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ecab571dd62d3440abfa7e4f6de2d711, type: 3}
+  m_Script: {fileID: 11500000, guid: d66aba1acac8a4e1a9496d5ede2c3e59, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CannonTrigger
-  cannonScript: {fileID: 0}
+  m_EditorClassIdentifier: Assembly-CSharp::Cannon
+  bullet: {fileID: 7280585107391049026, guid: 08eff059fe0204eb38c781942cae958e, type: 3}
+  cannon: {fileID: 0}
+  fireRate: 4

@@ -3,7 +3,7 @@ using UnityEngine;
 public class CannonBullet : MonoBehaviour
 {
     public float speed = 12f;
-    public float lifeTime = 15f;
+    public float lifeTime = 20f;
 
     void Start()
     {

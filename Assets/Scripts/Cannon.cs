@@ -2,28 +2,30 @@ using UnityEngine;
 
 public class Cannon : MonoBehaviour
 {
-    public GameObject bulletPrefab;
-    public Transform firePoint;
-    public float fireRate = 2.0f; // Sekunder mellom hver kule
+    public GameObject bullet;
+    public Transform cannon;
+    public float fireRate = 2.0f;
+    private bool hasTriggered = false;
 
-    public void StartFiring()
+    private void OnTriggerEnter(Collider other)
     {
-        // Starter skytingen. 0f betyr "start med en gang",
-        // fireRate er hvor ofte den skal gjentas.
-        InvokeRepeating("Fire", 0f, fireRate);
-    }
-
-    public void StopFiring()
-    {
-        // Stopper all skyting fra denne kanonen
-        CancelInvoke("Fire");
+        if (other.CompareTag("Player") && !hasTriggered)
+        {
+            hasTriggered = true;
+            InvokeRepeating("Fire", 0f, fireRate);
+        }
     }
 
     void Fire()
     {
-        if (bulletPrefab != null && firePoint != null)
+        if (bullet != null && cannon != null)
         {
-            Instantiate(bulletPrefab, firePoint.position, firePoint.rotation);
+            Instantiate(bullet, cannon.position, cannon.rotation);
         }
+    }
+
+    public void StopFiring()
+    {
+        CancelInvoke("Fire");
     }
 }
