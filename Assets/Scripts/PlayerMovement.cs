@@ -27,9 +27,17 @@ public class PlayerMovement : MonoBehaviour
     void Update()
     {
         // Hvis movement er låst, ikke les input og ikke flytt spilleren
+            // Hvis movement er låst, skal spilleren IKKE kunne bevege seg i det hele tatt
         if (!canMove)
         {
             animator.SetFloat("Speed", 0f);
+
+            // Stopper gammel jump/gravity-fart
+            velocity = Vector3.zero;
+
+            // Stopper kraft fra transportbånd eller andre ting
+            conveyorForce = Vector3.zero;
+
             return;
         }
 

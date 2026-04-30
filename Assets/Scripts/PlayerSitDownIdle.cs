@@ -2,9 +2,10 @@ using UnityEngine;
 
 public class PlayerIdleSit : MonoBehaviour
 {
+    [Header("Idle Sit Settings")]
     public float timeBeforeSitting = 10f;
     public float sitDownTime = 1f;
-    public float standUpTime = 1f;
+    public float standUpTime = 1.5f;
 
     private Animator animator;
     private PlayerMovement playerMovement;
@@ -27,7 +28,7 @@ public class PlayerIdleSit : MonoBehaviour
         bool holdingKey = IsPressingMovementKey();
         bool pressedKey = PressedMovementKeyThisFrame();
 
-        // Karakteren holder på å sette seg ned
+        // Hvis karakteren setter seg ned, vent til animasjonen er ferdig
         if (isSittingDown)
         {
             actionTimer -= Time.deltaTime;
@@ -41,7 +42,25 @@ public class PlayerIdleSit : MonoBehaviour
             return;
         }
 
-        // Karakteren sitter
+        // Hvis karakteren reiser seg opp, vent før movement skrus på igjen
+        if (isStandingUp)
+        {
+            actionTimer -= Time.deltaTime;
+
+            if (actionTimer <= 0f)
+            {
+                isStandingUp = false;
+
+                if (playerMovement != null)
+                {
+                    playerMovement.canMove = true;
+                }
+            }
+
+            return;
+        }
+
+        // Hvis karakteren sitter, start standup når spilleren trykker movement
         if (isSitting)
         {
             if (pressedKey)
@@ -52,36 +71,16 @@ public class PlayerIdleSit : MonoBehaviour
             return;
         }
 
-        // Karakteren holder på å reise seg opp
-        if (isStandingUp)
-        {
-            actionTimer -= Time.deltaTime;
-
-            if (actionTimer <= 0f)
-            {
-                isStandingUp = false;
-
-                // Movement skrus på først når stand-up er ferdig
-                if (playerMovement != null)
-                {
-                    playerMovement.canMove = true;
-                }
-            }
-
-            return;
-        }
-
-        // Hvis spilleren gjør noe, reset idle-timer
+        // Hvis spilleren gjør noe, reset idle timer
         if (holdingKey)
         {
             idleTimer = 0f;
             return;
         }
 
-        // Tell opp hvor lenge spilleren ikke gjør noe
+        // Tell hvor lenge spilleren har vært idle
         idleTimer += Time.deltaTime;
 
-        // Etter nok tid: sett karakteren ned
         if (idleTimer >= timeBeforeSitting)
         {
             StartSittingDown();
@@ -111,9 +110,11 @@ public class PlayerIdleSit : MonoBehaviour
         idleTimer = 0f;
 
         isSittingDown = true;
+        isSitting = false;
+        isStandingUp = false;
+
         actionTimer = sitDownTime;
 
-        // Lås movement mens karakteren setter seg og sitter
         if (playerMovement != null)
         {
             playerMovement.canMove = false;
@@ -126,12 +127,18 @@ public class PlayerIdleSit : MonoBehaviour
     private void StartStandingUp()
     {
         isSitting = false;
+        isSittingDown = false;
         isStandingUp = true;
+
         actionTimer = standUpTime;
 
-        animator.SetTrigger("Standup");
+        // Movement skal fortsatt være av mens standup-animasjonen spiller
+        if (playerMovement != null)
+        {
+            playerMovement.canMove = false;
+        }
 
-        // Ikke skru på movement her.
-        // Movement skrus på når standUpTime er ferdig.
+        animator.SetFloat("Speed", 0f);
+        animator.SetTrigger("Standup");
     }
 }
