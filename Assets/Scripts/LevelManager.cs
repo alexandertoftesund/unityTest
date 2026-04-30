@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using System.Collections; // Viktig for Coroutines
+using System.Collections;
 
 public class LevelManager : MonoBehaviour
 {
@@ -8,7 +8,7 @@ public class LevelManager : MonoBehaviour
 
     [Header("Global UI")]
     public CanvasGroup blackScreen;
-    public float globalFadeSpeed = 1.0f; // Hvor fort vi fader ut i starten av et nivå
+    public float globalFadeSpeed = 1.0f;
 
     private Transform player;
     private Vector3 currentSpawnPoint;
@@ -16,44 +16,29 @@ public class LevelManager : MonoBehaviour
 
     private void Awake()
     {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-
+        // Hver scene har sin egen LevelManager.
+        // Ingen DontDestroyOnLoad, så level 1 og level 2 bruker hver sin riktige UI/spawn.
         Instance = this;
-        DontDestroyOnLoad(gameObject);
     }
 
-    private void OnEnable()
-    {
-        SceneManager.sceneLoaded += OnSceneLoaded;
-    }
-
-    private void OnDisable()
-    {
-        SceneManager.sceneLoaded -= OnSceneLoaded;
-    }
-
-    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    private void Start()
     {
         FindPlayerInScene();
 
-        // Start "Fade In" hver gang et nytt nivå lastes
         if (blackScreen != null)
         {
             StartCoroutine(FadeInSequence());
         }
+        else
+        {
+            Debug.LogWarning("LevelManager: BlackScreen er ikke koblet i Inspector.");
+        }
     }
 
-    // --- NY COROUTINE FOR Å FADE INN NÅR NIVÅET STARTER ---
-    IEnumerator FadeInSequence()
+    private IEnumerator FadeInSequence()
     {
-        // Vi sørger for at skjermen er helt svart først
         blackScreen.alpha = 1.0f;
 
-        // Vent en ørliten brøkdel så alt er lastet ferdig
         yield return new WaitForSeconds(0.1f);
 
         while (blackScreen.alpha > 0.0f)
@@ -61,16 +46,23 @@ public class LevelManager : MonoBehaviour
             blackScreen.alpha -= globalFadeSpeed * Time.deltaTime;
             yield return null;
         }
+
+        blackScreen.alpha = 0.0f;
     }
 
     private void FindPlayerInScene()
     {
         GameObject foundPlayer = GameObject.FindWithTag("Player");
+
         if (foundPlayer != null)
         {
             player = foundPlayer.transform;
             currentSpawnPoint = player.position;
             currentSpawnRotation = player.rotation;
+        }
+        else
+        {
+            Debug.LogWarning("LevelManager: Fant ingen GameObject med tag 'Player'.");
         }
     }
 
@@ -82,17 +74,30 @@ public class LevelManager : MonoBehaviour
 
     public void RespawnPlayer()
     {
-        if (player == null) FindPlayerInScene();
-
-        if (player != null)
+        if (player == null)
         {
-            CharacterController cc = player.GetComponent<CharacterController>();
-            if (cc != null) cc.enabled = false;
+            FindPlayerInScene();
+        }
 
-            player.position = currentSpawnPoint;
-            player.rotation = currentSpawnRotation;
+        if (player == null)
+        {
+            Debug.LogWarning("LevelManager: Kan ikke respawne fordi Player mangler.");
+            return;
+        }
 
-            if (cc != null) cc.enabled = true;
+        CharacterController cc = player.GetComponent<CharacterController>();
+
+        if (cc != null)
+        {
+            cc.enabled = false;
+        }
+
+        player.position = currentSpawnPoint;
+        player.rotation = currentSpawnRotation;
+
+        if (cc != null)
+        {
+            cc.enabled = true;
         }
     }
 
