@@ -7,6 +7,9 @@ public class PlayerMovement : MonoBehaviour
     public float jumpHeight = 2f;
     public float turnSpeed = 10f;
 
+    // Denne kan andre scripts bruke for å låse movement
+    public bool canMove = true;
+
     private CharacterController controller;
     private Vector3 velocity;
     private bool isGrounded;
@@ -23,6 +26,13 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
+        // Hvis movement er låst, ikke les input og ikke flytt spilleren
+        if (!canMove)
+        {
+            animator.SetFloat("Speed", 0f);
+            return;
+        }
+
         isGrounded = controller.isGrounded;
         if (isGrounded && velocity.y < 0)
         {
