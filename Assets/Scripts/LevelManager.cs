@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using System.Collections; // Viktig for Coroutines
 
 public class LevelManager : MonoBehaviour
 {
@@ -7,10 +8,11 @@ public class LevelManager : MonoBehaviour
 
     [Header("Global UI")]
     public CanvasGroup blackScreen;
+    public float globalFadeSpeed = 1.0f; // Hvor fort vi fader ut i starten av et nivå
 
     private Transform player;
     private Vector3 currentSpawnPoint;
-    private Quaternion currentSpawnRotation; // Ny variabel for retning
+    private Quaternion currentSpawnRotation;
 
     private void Awake()
     {
@@ -37,6 +39,28 @@ public class LevelManager : MonoBehaviour
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         FindPlayerInScene();
+
+        // Start "Fade In" hver gang et nytt nivå lastes
+        if (blackScreen != null)
+        {
+            StartCoroutine(FadeInSequence());
+        }
+    }
+
+    // --- NY COROUTINE FOR Å FADE INN NÅR NIVÅET STARTER ---
+    IEnumerator FadeInSequence()
+    {
+        // Vi sørger for at skjermen er helt svart først
+        blackScreen.alpha = 1.0f;
+
+        // Vent en ørliten brøkdel så alt er lastet ferdig
+        yield return new WaitForSeconds(0.1f);
+
+        while (blackScreen.alpha > 0.0f)
+        {
+            blackScreen.alpha -= globalFadeSpeed * Time.deltaTime;
+            yield return null;
+        }
     }
 
     private void FindPlayerInScene()
@@ -46,11 +70,10 @@ public class LevelManager : MonoBehaviour
         {
             player = foundPlayer.transform;
             currentSpawnPoint = player.position;
-            currentSpawnRotation = player.rotation; // Lagrer retningen spilleren har ved start
+            currentSpawnRotation = player.rotation;
         }
     }
 
-    // Oppdatert for å også kunne ta imot ny retning (f.eks. fra en checkpoint)
     public void UpdateSpawnPoint(Vector3 newPosition, Quaternion newRotation)
     {
         currentSpawnPoint = newPosition;
@@ -67,7 +90,7 @@ public class LevelManager : MonoBehaviour
             if (cc != null) cc.enabled = false;
 
             player.position = currentSpawnPoint;
-            player.rotation = currentSpawnRotation; // Setter retningen tilbake til start
+            player.rotation = currentSpawnRotation;
 
             if (cc != null) cc.enabled = true;
         }
