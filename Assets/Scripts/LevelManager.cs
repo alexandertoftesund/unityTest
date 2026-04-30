@@ -4,114 +4,52 @@ using System.Collections;
 
 public class LevelManager : MonoBehaviour
 {
-    public static LevelManager Instance { get; private set; }
+    public static LevelManager Instance;
 
-    [Header("Global UI")]
+    [Header("Settings")]
     public CanvasGroup blackScreen;
-    public float globalFadeSpeed = 1.0f;
+    public float fadeSpeed = 1f;
 
     private Transform player;
-    private Vector3 currentSpawnPoint;
-    private Quaternion currentSpawnRotation;
+    private Vector3 spawnPos;
+    private Quaternion spawnRot;
 
-    private void Awake()
+    // Awake og Start kjører kun én gang per level nå
+    void Awake() => Instance = this;
+
+    void Start()
     {
-        // Hver scene har sin egen LevelManager.
-        // Ingen DontDestroyOnLoad, så level 1 og level 2 bruker hver sin riktige UI/spawn.
-        Instance = this;
+        player = GameObject.FindWithTag("Player")?.transform;
+        if (player) UpdateSpawnPoint(player.position, player.rotation);
+        if (blackScreen) StartCoroutine(FadeIn());
     }
 
-    private void Start()
+    IEnumerator FadeIn()
     {
-        FindPlayerInScene();
-
-        if (blackScreen != null)
-        {
-            StartCoroutine(FadeInSequence());
-        }
-        else
-        {
-            Debug.LogWarning("LevelManager: BlackScreen er ikke koblet i Inspector.");
-        }
-    }
-
-    private IEnumerator FadeInSequence()
-    {
-        blackScreen.alpha = 1.0f;
-
-        yield return new WaitForSeconds(0.1f);
-
-        while (blackScreen.alpha > 0.0f)
-        {
-            blackScreen.alpha -= globalFadeSpeed * Time.deltaTime;
+        for (blackScreen.alpha = 1; blackScreen.alpha > 0; blackScreen.alpha -= fadeSpeed * Time.deltaTime)
             yield return null;
-        }
-
-        blackScreen.alpha = 0.0f;
     }
 
-    private void FindPlayerInScene()
+    public void UpdateSpawnPoint(Vector3 pos, Quaternion rot)
     {
-        GameObject foundPlayer = GameObject.FindWithTag("Player");
-
-        if (foundPlayer != null)
-        {
-            player = foundPlayer.transform;
-            currentSpawnPoint = player.position;
-            currentSpawnRotation = player.rotation;
-        }
-        else
-        {
-            Debug.LogWarning("LevelManager: Fant ingen GameObject med tag 'Player'.");
-        }
-    }
-
-    public void UpdateSpawnPoint(Vector3 newPosition, Quaternion newRotation)
-    {
-        currentSpawnPoint = newPosition;
-        currentSpawnRotation = newRotation;
+        spawnPos = pos;
+        spawnRot = rot;
     }
 
     public void RespawnPlayer()
     {
-        if (player == null)
-        {
-            FindPlayerInScene();
-        }
+        var cc = player.GetComponent<CharacterController>();
+        if (cc) cc.enabled = false; // Må deaktiveres for å flytte spilleren
 
-        if (player == null)
-        {
-            Debug.LogWarning("LevelManager: Kan ikke respawne fordi Player mangler.");
-            return;
-        }
+        player.SetPositionAndRotation(spawnPos, spawnRot);
 
-        CharacterController cc = player.GetComponent<CharacterController>();
-
-        if (cc != null)
-        {
-            cc.enabled = false;
-        }
-
-        player.position = currentSpawnPoint;
-        player.rotation = currentSpawnRotation;
-
-        if (cc != null)
-        {
-            cc.enabled = true;
-        }
+        if (cc) cc.enabled = true;
     }
 
     public void LoadNextLevel()
     {
-        int nextSceneIndex = SceneManager.GetActiveScene().buildIndex + 1;
-
-        if (nextSceneIndex < SceneManager.sceneCountInBuildSettings)
-        {
-            SceneManager.LoadScene(nextSceneIndex);
-        }
-        else
-        {
-            SceneManager.LoadScene(0);
-        }
+        int next = SceneManager.GetActiveScene().buildIndex + 1;
+        // Last neste, eller gå til start (0) hvis vi er på siste brett
+        SceneManager.LoadScene(next < SceneManager.sceneCountInBuildSettings ? next : 0);
     }
 }
