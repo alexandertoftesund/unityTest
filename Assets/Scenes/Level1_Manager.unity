@@ -413,6 +413,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LevelManager
   blackScreen: {fileID: 1199059510}
+  globalFadeSpeed: 1
 --- !u!4 &1626695276
 Transform:
   m_ObjectHideFlags: 0
