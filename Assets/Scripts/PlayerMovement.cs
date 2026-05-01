@@ -83,6 +83,18 @@ public class PlayerMovement : MonoBehaviour
         controller.Move(finalMovement * Time.deltaTime);
     }
 
+    public void Jump(float force)
+    {
+        // Vi setter den vertikale farten direkte
+        velocity.y = force;
+
+        // Valgfritt: Trigger hopp-animasjonen slik at det ser ut som et ordentlig hopp
+        if (animator != null)
+        {
+            animator.SetTrigger("Jump");
+        }
+    }
+
     // Når spilleren er inne i trigger-boksen til et belte
     private void OnTriggerStay(Collider other)
     {

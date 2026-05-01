@@ -8,13 +8,18 @@ public class LevelManager : MonoBehaviour
 
     [Header("Settings")]
     public CanvasGroup blackScreen;
+
+    [Header("Respawn Innstillinger")]
     public float fadeSpeed = 1f;
+    public float floatHeight = 5.0f;
+    public float floatDownSpeed = 4.0f;
+    public float landingDelay = 0.25f;
 
     private Transform player;
     private Vector3 spawnPos;
     private Quaternion spawnRot;
+    private bool isRespawning = false;
 
-    // Awake og Start kjører kun én gang per level nå
     void Awake() => Instance = this;
 
     void Start()
@@ -26,8 +31,15 @@ public class LevelManager : MonoBehaviour
 
     IEnumerator FadeIn()
     {
-        for (blackScreen.alpha = 1; blackScreen.alpha > 0; blackScreen.alpha -= fadeSpeed * Time.deltaTime)
-            yield return null;
+        if (blackScreen)
+        {
+            blackScreen.alpha = 1;
+            while (blackScreen.alpha > 0)
+            {
+                blackScreen.alpha -= fadeSpeed * Time.deltaTime;
+                yield return null;
+            }
+        }
     }
 
     public void UpdateSpawnPoint(Vector3 pos, Quaternion rot)
@@ -36,20 +48,88 @@ public class LevelManager : MonoBehaviour
         spawnRot = rot;
     }
 
-    public void RespawnPlayer()
+    public void StartRespawn(GameObject playerObj)
     {
-        var cc = player.GetComponent<CharacterController>();
-        if (cc) cc.enabled = false; // Må deaktiveres for å flytte spilleren
+        if (!isRespawning)
+        {
+            StartCoroutine(RespawnSequence(playerObj));
+        }
+    }
 
-        player.SetPositionAndRotation(spawnPos, spawnRot);
+    private IEnumerator RespawnSequence(GameObject playerObj)
+    {
+        isRespawning = true;
 
-        if (cc) cc.enabled = true;
+        PlayerMovement movement = playerObj.GetComponent<PlayerMovement>();
+        CharacterController cc = playerObj.GetComponent<CharacterController>();
+        Vector3 originalScale = playerObj.transform.localScale;
+
+        // Skru av kontroll
+        if (movement != null) movement.enabled = false;
+        if (cc != null) cc.enabled = false;
+
+        // 1. KRYMP (Spilleren forsvinner visuelt der han døde)
+        float elapsed = 0;
+        while (elapsed < 0.4f)
+        {
+            playerObj.transform.localScale = Vector3.Lerp(originalScale, Vector3.zero, elapsed / 0.4f);
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        // 2. FADE TIL SVART
+        if (blackScreen != null)
+        {
+            while (blackScreen.alpha < 1.0f)
+            {
+                blackScreen.alpha += fadeSpeed * Time.deltaTime;
+                yield return null;
+            }
+        }
+
+        // --- RESETTER FIENDER ---
+        Enemy[] allEnemies = Object.FindObjectsByType<Enemy>(FindObjectsSortMode.None);
+        foreach (Enemy e in allEnemies) e.ResetEnemy();
+
+        // 3. TELEPORTERING (Mens skjermen er svart)
+        playerObj.transform.localScale = originalScale;
+        if (cc) cc.enabled = false;
+        playerObj.transform.SetPositionAndRotation(spawnPos, spawnRot);
+
+        // Klargjør fall-posisjon
+        Vector3 targetGroundPos = playerObj.transform.position;
+        playerObj.transform.position = targetGroundPos + Vector3.up * floatHeight;
+
+        // 4. BEVEGELSE NED OG FADE UT (Samtidig - ingen venting!)
+        while (Vector3.Distance(playerObj.transform.position, targetGroundPos) > 0.05f || (blackScreen != null && blackScreen.alpha > 0))
+        {
+            // Beveg karakteren nedover
+            playerObj.transform.position = Vector3.MoveTowards(playerObj.transform.position, targetGroundPos, floatDownSpeed * Time.deltaTime);
+
+            // Fade ut skjermen
+            if (blackScreen != null && blackScreen.alpha > 0)
+            {
+                blackScreen.alpha -= fadeSpeed * Time.deltaTime;
+            }
+
+            yield return null;
+        }
+
+        // 5. FERDIG LANDET
+        playerObj.transform.position = targetGroundPos;
+
+        yield return new WaitForSeconds(landingDelay);
+
+        // Gi kontrollen tilbake (Animasjonene styres nå automatisk av hastigheten din igjen)
+        if (cc != null) cc.enabled = true;
+        if (movement != null) movement.enabled = true;
+
+        isRespawning = false;
     }
 
     public void LoadNextLevel()
     {
         int next = SceneManager.GetActiveScene().buildIndex + 1;
-        // Last neste, eller gå til start (0) hvis vi er på siste brett
         SceneManager.LoadScene(next < SceneManager.sceneCountInBuildSettings ? next : 0);
     }
 }
