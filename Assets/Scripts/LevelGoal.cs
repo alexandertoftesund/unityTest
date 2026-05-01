@@ -8,7 +8,8 @@ public class LevelGoal : MonoBehaviour
     public GameObject collectEffect;
 
     [Header("Overgang")]
-    public float victoryDelay = 1.0f;
+    public float startDelay = 0.2f;
+    public float victoryDelay = 4.0f; // <-- ENDRET: Her styrer du hvor lenge han jubler
     public float fadeSpeed = 1.0f;
 
     private bool hasReachedGoal = false;
@@ -32,22 +33,22 @@ public class LevelGoal : MonoBehaviour
 
     IEnumerator FinishLevelSequence(GameObject player)
     {
-        // 1. GJEM DIAMANTEN UMIDDELBART
+        // 1. START-DELAY OG EFFEKT
+        yield return new WaitForSeconds(startDelay);
+
         if (collectEffect != null)
         {
             Instantiate(collectEffect, transform.position, Quaternion.identity);
         }
 
-        // Vi skrur av både utseende og kollisjon på diamanten med en gang
         if (GetComponent<Renderer>() != null) GetComponent<Renderer>().enabled = false;
         if (GetComponent<Collider>() != null) GetComponent<Collider>().enabled = false;
 
         CharacterController cc = player.GetComponent<CharacterController>();
         PlayerMovement movement = player.GetComponent<PlayerMovement>();
-        Animator anim = player.GetComponent<Animator>();
+        Animator anim = player.GetComponentInChildren<Animator>();
 
         // 2. VENT PÅ AT SPILLEREN LANDER
-        // Vi venter med å skru av 'movement' slik at tyngdekraften fortsatt fungerer
         float safetyTimer = 2.0f;
         if (cc != null)
         {
@@ -58,11 +59,25 @@ public class LevelGoal : MonoBehaviour
             }
         }
 
-        // 3. NÅ HAR VI LANDET - STOPP KONTROLL OG SPILL ANIMASJON
-        if (movement != null) movement.enabled = false;
-        if (anim != null) anim.SetTrigger("Win");
+        // En bitteliten pause etter landing før han snur seg og jubler
+        yield return new WaitForSeconds(0.3f);
 
-        // 4. SEIERS-PAUSE (Her kan spilleren se animasjonen sin)
+        // 3. STOPP KONTROLL OG START JUBEL
+        if (movement != null) movement.enabled = false;
+
+        if (anim != null)
+        {
+            // Snur karakteren mot kameraet
+            Vector3 cameraPos = Camera.main.transform.position;
+            cameraPos.y = player.transform.position.y;
+            player.transform.LookAt(cameraPos);
+
+            // Spiller "Cheering" fra bildet ditt
+            anim.CrossFade("Cheering", 0.2f);
+        }
+
+        // 4. DEN LANGE JUBLE-PAUSEN
+        // Her blir karakteren stående i "Cheering"-staten helt til tiden er ute
         yield return new WaitForSeconds(victoryDelay);
 
         // 5. FADE TIL SVART
