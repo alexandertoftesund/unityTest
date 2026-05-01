@@ -7,47 +7,62 @@ public class PlayerMovement : MonoBehaviour
     public float jumpHeight = 2f;
     public float turnSpeed = 10f;
 
-    // Denne kan andre scripts bruke for å låse movement
+    [Header("Lyd")]
+    public AudioSource audioSource;
+    public AudioClip footstepSound;
+    public AudioClip landSound;
+    [Range(0, 1)] public float footstepVolume = 0.3f;
+    [Range(0, 1)] public float landVolume = 0.5f; // NY: Egen kontroll for landingsvolum
+    public float footstepInterval = 0.35f;
+
     public bool canMove = true;
 
     private CharacterController controller;
     private Vector3 velocity;
     private bool isGrounded;
+    private bool wasGrounded;
     private Animator animator;
-
-    // Kraften vi får fra transportbåndet
     private Vector3 conveyorForce = Vector3.zero;
+
+    private float nextFootstepTime;
 
     void Start()
     {
         controller = GetComponent<CharacterController>();
         animator = GetComponent<Animator>();
+        if (audioSource == null) audioSource = GetComponent<AudioSource>();
+
+        wasGrounded = true;
     }
 
     void Update()
     {
-        // Hvis movement er låst, ikke les input og ikke flytt spilleren
-            // Hvis movement er låst, skal spilleren IKKE kunne bevege seg i det hele tatt
         if (!canMove)
         {
             animator.SetFloat("Speed", 0f);
-
-            // Stopper gammel jump/gravity-fart
             velocity = Vector3.zero;
-
-            // Stopper kraft fra transportbånd eller andre ting
             conveyorForce = Vector3.zero;
-
             return;
         }
 
         isGrounded = controller.isGrounded;
+
+        // Sjekker om vi har landet denne framen
+        if (isGrounded && !wasGrounded)
+        {
+            if (velocity.y < -1f && audioSource != null && landSound != null)
+            {
+                // Bruker landVolume-variabelen her
+                audioSource.PlayOneShot(landSound, landVolume);
+            }
+        }
+        wasGrounded = isGrounded;
+
         if (isGrounded && velocity.y < 0)
         {
             velocity.y = -2f;
         }
 
-        // 1. Spillerens egen bevegelse (WASD)
         float x = Input.GetAxisRaw("Horizontal");
         float z = Input.GetAxisRaw("Vertical");
         Vector3 inputDir = (Camera.main.transform.right * x + Camera.main.transform.forward * z);
@@ -60,57 +75,47 @@ public class PlayerMovement : MonoBehaviour
             Quaternion targetRotation = Quaternion.LookRotation(inputDir);
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, turnSpeed * Time.deltaTime);
             animator.SetFloat("Speed", 1f);
+
+            if (isGrounded && Time.time > nextFootstepTime)
+            {
+                if (audioSource != null && footstepSound != null)
+                {
+                    audioSource.pitch = Random.Range(0.9f, 1.1f);
+                    audioSource.PlayOneShot(footstepSound, footstepVolume);
+                }
+                nextFootstepTime = Time.time + footstepInterval;
+            }
         }
         else
         {
             animator.SetFloat("Speed", 0f);
         }
 
-        // 2. Hopp-logikk
         if (Input.GetButtonDown("Jump") && isGrounded)
         {
             velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
             animator.SetTrigger("Jump");
         }
 
-        // 3. Tyngdekraft
         velocity.y += gravity * Time.deltaTime;
-
-        // --- DEN VIKTIGE SAMMENSLAINGEN ---
-        // Vi legger sammen ALT: Gange + Hopp + Kraft fra beltet
         Vector3 finalMovement = playerMove + conveyorForce + velocity;
-
         controller.Move(finalMovement * Time.deltaTime);
     }
 
     public void Jump(float force)
     {
-        // Vi setter den vertikale farten direkte
         velocity.y = force;
-
-        // Valgfritt: Trigger hopp-animasjonen slik at det ser ut som et ordentlig hopp
-        if (animator != null)
-        {
-            animator.SetTrigger("Jump");
-        }
+        if (animator != null) animator.SetTrigger("Jump");
     }
 
-    // Når spilleren er inne i trigger-boksen til et belte
     private void OnTriggerStay(Collider other)
     {
         ConveyorBelt belt = other.GetComponent<ConveyorBelt>();
-        if (belt != null)
-        {
-            conveyorForce = belt.direction * belt.speed;
-        }
+        if (belt != null) conveyorForce = belt.direction * belt.speed;
     }
 
-    // Når spilleren hopper ut av eller forlater boksen
     private void OnTriggerExit(Collider other)
     {
-        if (other.GetComponent<ConveyorBelt>() != null)
-        {
-            conveyorForce = Vector3.zero;
-        }
+        if (other.GetComponent<ConveyorBelt>() != null) conveyorForce = Vector3.zero;
     }
 }

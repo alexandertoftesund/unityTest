@@ -7,12 +7,27 @@ public class LevelGoal : MonoBehaviour
     public float rotationSpeed = 50f;
     public GameObject collectEffect;
 
+    [Header("Lyd")]
+    public AudioClip victorySound;
+    private AudioSource audioSource;
+
     [Header("Overgang")]
     public float startDelay = 0.2f;
-    public float victoryDelay = 4.0f; // <-- ENDRET: Her styrer du hvor lenge han jubler
+    public float victoryDelay = 4.0f;
     public float fadeSpeed = 1.0f;
 
     private bool hasReachedGoal = false;
+
+    void Awake()
+    {
+        // ENDRET: Nå leter vi også i barn-objekter etter Audio Source
+        audioSource = GetComponentInChildren<AudioSource>();
+
+        if (audioSource == null)
+        {
+            Debug.LogWarning("Fant ingen AudioSource på " + gameObject.name + " eller dens barn!");
+        }
+    }
 
     void Update()
     {
@@ -33,7 +48,6 @@ public class LevelGoal : MonoBehaviour
 
     IEnumerator FinishLevelSequence(GameObject player)
     {
-        // 1. START-DELAY OG EFFEKT
         yield return new WaitForSeconds(startDelay);
 
         if (collectEffect != null)
@@ -48,7 +62,7 @@ public class LevelGoal : MonoBehaviour
         PlayerMovement movement = player.GetComponent<PlayerMovement>();
         Animator anim = player.GetComponentInChildren<Animator>();
 
-        // 2. VENT PÅ AT SPILLEREN LANDER
+        // Vent til spilleren har landet
         float safetyTimer = 2.0f;
         if (cc != null)
         {
@@ -59,28 +73,30 @@ public class LevelGoal : MonoBehaviour
             }
         }
 
-        // En bitteliten pause etter landing før han snur seg og jubler
         yield return new WaitForSeconds(0.3f);
 
-        // 3. STOPP KONTROLL OG START JUBEL
+        // --- SEIERSSEKVENS ---
         if (movement != null) movement.enabled = false;
+
+        // Spiller lyden hvis vi har funnet komponenten og en fil
+        if (audioSource != null && victorySound != null)
+        {
+            audioSource.PlayOneShot(victorySound);
+        }
 
         if (anim != null)
         {
-            // Snur karakteren mot kameraet
             Vector3 cameraPos = Camera.main.transform.position;
             cameraPos.y = player.transform.position.y;
             player.transform.LookAt(cameraPos);
 
-            // Spiller "Cheering" fra bildet ditt
+            // Starter jubel-animasjonen fra Animator-vinduet
             anim.CrossFade("Cheering", 0.2f);
         }
 
-        // 4. DEN LANGE JUBLE-PAUSEN
-        // Her blir karakteren stående i "Cheering"-staten helt til tiden er ute
         yield return new WaitForSeconds(victoryDelay);
 
-        // 5. FADE TIL SVART
+        // Tones ut til svart
         CanvasGroup uiFade = LevelManager.Instance.blackScreen;
         if (uiFade != null)
         {

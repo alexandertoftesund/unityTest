@@ -23,6 +23,11 @@ public class Enemy : MonoBehaviour
     public float waitAtPointDuration = 2.0f;
     public float attackCooldown = 2.0f;
 
+    [Header("Lyd")]
+    public AudioSource audioSource;
+    public AudioClip swingSound;
+    [Range(0, 1)] public float swingVolume = 0.5f;
+
     [Header("Referanser")]
     public Transform player;
     public Transform[] patrolPoints = new Transform[0];
@@ -42,6 +47,12 @@ public class Enemy : MonoBehaviour
     {
         agent = GetComponent<NavMeshAgent>();
         anim = GetComponent<Animator>();
+
+        // Prøver å hente AudioSource automatisk hvis den ikke er lagt inn manuelt
+        if (audioSource == null)
+        {
+            audioSource = GetComponent<AudioSource>();
+        }
 
         // Lagre startpunktet
         startPosition = transform.position;
@@ -65,7 +76,6 @@ public class Enemy : MonoBehaviour
     {
         activePatrolPoints.Clear();
 
-        // 1. Prioriter manuelle punkter hvis de finnes
         if (patrolPoints != null && patrolPoints.Length > 0)
         {
             foreach (Transform t in patrolPoints)
@@ -74,28 +84,24 @@ public class Enemy : MonoBehaviour
             }
         }
 
-        // 2. Hvis ingen manuelle, generer automatiske punkter "midt på" NavMeshet
         if (activePatrolPoints.Count == 0 && autoPatrolRadius > 0)
         {
             for (int i = 0; i < autoPointCount; i++)
             {
                 activePatrolPoints.Add(GetRandomNavMeshPoint(startPosition, autoPatrolRadius));
             }
-            activePatrolPoints.Add(startPosition); // Legg alltid til hjemmet som et punkt
+            activePatrolPoints.Add(startPosition);
         }
     }
 
-    // Forbedret punkt-finner som unngår kantene
     Vector3 GetRandomNavMeshPoint(Vector3 center, float radius)
     {
         for (int i = 0; i < 30; i++)
         {
-            // Velger et flatt punkt på en sirkel i stedet for en kule i lufta
             Vector2 randomCircle = Random.insideUnitCircle * radius;
             Vector3 randomPos = new Vector3(center.x + randomCircle.x, center.y, center.z + randomCircle.y);
 
             NavMeshHit hit;
-            // Bruker kort søkeavstand (1.0f) for å unngå at den "snapper" til fjerne kanter
             if (NavMesh.SamplePosition(randomPos, out hit, 1.0f, NavMesh.AllAreas))
             {
                 return hit.position;
@@ -110,7 +116,6 @@ public class Enemy : MonoBehaviour
 
         float distance = Vector3.Distance(transform.position, player.position);
 
-        // --- TILSTANDS-LOGIKK ---
         if (distance <= attackRange) currentState = State.Attack;
         else if (distance <= detectionRange) currentState = State.Chase;
         else if (currentState == State.Chase || currentState == State.Attack)
@@ -119,7 +124,6 @@ public class Enemy : MonoBehaviour
             GoToNextPoint();
         }
 
-        // --- UTFØRING ---
         switch (currentState)
         {
             case State.Patrol:
@@ -153,7 +157,6 @@ public class Enemy : MonoBehaviour
                 break;
         }
 
-        // Oppdaterer farten i Blend Tree for glidende animasjoner
         anim.SetFloat("Speed", agent.velocity.magnitude);
     }
 
@@ -167,21 +170,28 @@ public class Enemy : MonoBehaviour
 
         if (Time.time > lastAttackTime + attackCooldown)
         {
-            // Velger en av de tre angreps-triggerne i Animator
+            // --- LYD-LOGIKK STARTER HER ---
+            if (audioSource != null && swingSound != null)
+            {
+                // Varierer pitch litt for mer naturlig lyd
+                audioSource.pitch = Random.Range(0.9f, 1.1f);
+                audioSource.PlayOneShot(swingSound, swingVolume);
+            }
+            // --- LYD-LOGIKK SLUTTER HER ---
+
             int randomAttack = Random.Range(1, 4);
             anim.SetTrigger("Attack" + randomAttack);
             lastAttackTime = Time.time;
         }
     }
 
-    // Kalles av RespawnHandler når spilleren dør
     public void ResetEnemy()
     {
         currentState = State.Patrol;
 
         if (agent != null && agent.isOnNavMesh)
         {
-            agent.Warp(startPosition); // Teleporterer agenten korrekt tilbake
+            agent.Warp(startPosition);
         }
 
         transform.rotation = startRotation;

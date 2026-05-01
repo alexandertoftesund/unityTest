@@ -15,12 +15,22 @@ public class LevelManager : MonoBehaviour
     public float floatDownSpeed = 4.0f;
     public float landingDelay = 0.25f;
 
+    [Header("Lyd")]
+    public AudioSource audioSource;
+    public AudioClip shrinkSound;
+    [Range(0, 1)] public float soundVolume = 0.5f;
+
     private Transform player;
     private Vector3 spawnPos;
     private Quaternion spawnRot;
     private bool isRespawning = false;
 
-    void Awake() => Instance = this;
+    void Awake()
+    {
+        Instance = this;
+        // Sikrer at vi har en høyttaler
+        if (audioSource == null) audioSource = GetComponent<AudioSource>();
+    }
 
     void Start()
     {
@@ -67,6 +77,12 @@ public class LevelManager : MonoBehaviour
         // Skru av kontroll
         if (movement != null) movement.enabled = false;
         if (cc != null) cc.enabled = false;
+
+        // --- SPILL KRYMPE-LYDEN HER ---
+        if (audioSource != null && shrinkSound != null)
+        {
+            audioSource.PlayOneShot(shrinkSound, soundVolume);
+        }
 
         // 1. KRYMP (Spilleren forsvinner visuelt der han døde)
         float elapsed = 0;
@@ -120,7 +136,7 @@ public class LevelManager : MonoBehaviour
 
         yield return new WaitForSeconds(landingDelay);
 
-        // Gi kontrollen tilbake (Animasjonene styres nå automatisk av hastigheten din igjen)
+        // Gi kontrollen tilbake
         if (cc != null) cc.enabled = true;
         if (movement != null) movement.enabled = true;
 
