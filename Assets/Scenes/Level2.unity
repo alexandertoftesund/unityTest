@@ -16030,6 +16030,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyDeath
   shrinkDuration: 0.75
   bounceForce: 8
+  deathSound: {fileID: 8300000, guid: 323e15cfe809e114ab92c9f4b25e8bc2, type: 3}
+  soundVolume: 1
 --- !u!65 &1646212790
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -18413,6 +18415,7 @@ MonoBehaviour:
   footstepVolume: 0.175
   landVolume: 0.101
   footstepInterval: 0.35
+  landCooldown: 0.5
   canMove: 1
 --- !u!143 &2074251201
 CharacterController:

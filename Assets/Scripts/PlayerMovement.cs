@@ -12,8 +12,9 @@ public class PlayerMovement : MonoBehaviour
     public AudioClip footstepSound;
     public AudioClip landSound;
     [Range(0, 1)] public float footstepVolume = 0.3f;
-    [Range(0, 1)] public float landVolume = 0.5f; // NY: Egen kontroll for landingsvolum
+    [Range(0, 1)] public float landVolume = 0.5f;
     public float footstepInterval = 0.35f;
+    public float landCooldown = 0.5f;
 
     public bool canMove = true;
 
@@ -25,6 +26,7 @@ public class PlayerMovement : MonoBehaviour
     private Vector3 conveyorForce = Vector3.zero;
 
     private float nextFootstepTime;
+    private float lastLandTime;
 
     void Start()
     {
@@ -47,13 +49,15 @@ public class PlayerMovement : MonoBehaviour
 
         isGrounded = controller.isGrounded;
 
-        // Sjekker om vi har landet denne framen
         if (isGrounded && !wasGrounded)
         {
-            if (velocity.y < -1f && audioSource != null && landSound != null)
+            if (velocity.y < -1f && Time.time > lastLandTime + landCooldown)
             {
-                // Bruker landVolume-variabelen her
-                audioSource.PlayOneShot(landSound, landVolume);
+                if (audioSource != null && landSound != null)
+                {
+                    audioSource.PlayOneShot(landSound, landVolume);
+                    lastLandTime = Time.time;
+                }
             }
         }
         wasGrounded = isGrounded;
@@ -61,6 +65,11 @@ public class PlayerMovement : MonoBehaviour
         if (isGrounded && velocity.y < 0)
         {
             velocity.y = -2f;
+
+            // Nullstill horisontal momentum når vi lander.
+            // Dette stopper deg fra å skli videre etter spretten når du treffer bakken.
+            velocity.x = 0f;
+            velocity.z = 0f;
         }
 
         float x = Input.GetAxisRaw("Horizontal");
@@ -69,6 +78,8 @@ public class PlayerMovement : MonoBehaviour
         inputDir.y = 0;
 
         Vector3 playerMove = Vector3.zero;
+
+        // Standard bevegelse styrt av spilleren gjelder nå alltid, også i lufta
         if (inputDir.magnitude > 0.1f)
         {
             playerMove = inputDir.normalized * moveSpeed;
@@ -91,6 +102,7 @@ public class PlayerMovement : MonoBehaviour
             animator.SetFloat("Speed", 0f);
         }
 
+        // Standard hopp
         if (Input.GetButtonDown("Jump") && isGrounded)
         {
             velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
@@ -98,6 +110,8 @@ public class PlayerMovement : MonoBehaviour
         }
 
         velocity.y += gravity * Time.deltaTime;
+
+        // Farten fra spring-paden ligger lagret i "velocity", og legges sammen med spillerens styring ("playerMove")
         Vector3 finalMovement = playerMove + conveyorForce + velocity;
         controller.Move(finalMovement * Time.deltaTime);
     }
@@ -105,6 +119,16 @@ public class PlayerMovement : MonoBehaviour
     public void Jump(float force)
     {
         velocity.y = force;
+        if (animator != null) animator.SetTrigger("Jump");
+    }
+
+    // Metoden SpringPad.cs roper på
+    public void ApplyDirectionalJump(Vector3 bounceDirection)
+    {
+        // Vi setter hele farten (X, Y og Z) direkte.
+        // Fordi vi ikke lenger låser styringen, kan du nå finjustere landingen mens du flyr!
+        velocity = bounceDirection;
+
         if (animator != null) animator.SetTrigger("Jump");
     }
 

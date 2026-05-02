@@ -8,6 +8,10 @@ public class EnemyDeath : MonoBehaviour
     public float shrinkDuration = 0.5f;
     public float bounceForce = 12f;
 
+    [Header("Lyd")]
+    public AudioClip deathSound; // Felt for å legge inn lydklippet
+    [Range(0f, 1f)] public float soundVolume = 1f; // Volumkontroll
+
     private bool isDead = false;
     private GameObject enemyRoot;
 
@@ -23,6 +27,12 @@ public class EnemyDeath : MonoBehaviour
         if (!isDead && other.CompareTag("Player"))
         {
             isDead = true; // Sett denne MED EN GANG
+
+            // Spill av dødslyden hvis et klipp er lagt til
+            if (deathSound != null)
+            {
+                AudioSource.PlayClipAtPoint(deathSound, transform.position, soundVolume);
+            }
 
             // 1. FINN OG DEAKTIVER SVERDET/RESPAWNHANDLER UMIDDELBART
             // Dette hindrer at spilleren dør samtidig som fienden.
